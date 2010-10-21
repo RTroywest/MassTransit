@@ -53,14 +53,18 @@ namespace MassTransit.Transports.Msmq.Tests
 
             var message = new PingMessage();
             LocalBus.Publish(message);
-
+			
         	future.IsAvailable(_timeout).ShouldBeTrue("Message was not received");
-
-        	RemoteEndpoint.ShouldNotContain(message);
+			
+			//The message is being bounced in and out of the queue as the transaction
+			//is rolled back and started again so wait on the queue for the message so
+			//that you'll get receipt of it. If you just check with zero timeout the 
+			//likelihood of catching the message back in the queue is slim.
+			RemoteEndpoint.ShouldContain(message, 10.Seconds());
         }
 
         [Test]
-        public void It_should_not_rollback_a_send_if_an_exception_is_thrown()
+        public void It_should_rollback_a_send_if_an_exception_is_thrown()
         {
             var consumer = new TestMessageConsumer<PongMessage>();
             LocalBus.Subscribe(consumer);
@@ -76,7 +80,7 @@ namespace MassTransit.Transports.Msmq.Tests
 
             LocalBus.Publish(message);
 
-            consumer.ShouldHaveReceivedMessage(response, _timeout);
+            consumer.ShouldNotHaveReceivedMessage(response, _timeout);
         }
     }
 
