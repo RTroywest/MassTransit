@@ -171,7 +171,7 @@ namespace MassTransit.Transports.Msmq
 									_log.Error("An exception was thrown by a message consumer", ex);
 
 								_tracker.IncrementRetryCount(message.Id);
-								MoveMessageToErrorTransport(m);
+								throw;//if non-transactional we need to MoveMessageToErrorTransport instead/as well....
 							}
 					    };
 				};

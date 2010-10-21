@@ -114,7 +114,7 @@ namespace MassTransit.Transports.Msmq
 										string.Format("Received message does not match current message: ({0} != {1})", message.Id, current.Id));
 
 								receive(message);
-
+								
 								received = true;
 							}
 						});

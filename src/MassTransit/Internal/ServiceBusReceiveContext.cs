@@ -10,6 +10,8 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the 
 // specific language governing permissions and limitations under the License.
+using System.Transactions;
+
 namespace MassTransit.Internal
 {
 	using System;
@@ -126,8 +128,16 @@ namespace MassTransit.Internal
 
 						atLeastOneConsumerFailed = true;
 						lastException = ex;
-
-						CreateAndPublishFault(message, ex);
+						
+						//this must be done inside a suppressed transactionScope, otherwise when using a transactional
+						//endpoint the publishing of the Fault message will be rolled back because at least one consumer
+						//threw an exception, which is about to be wrapped in the MessageException and rethrown. This
+						//will cause the TransactionScope for the "read from queue" to be rolled back - taking the message
+						//we are trying to send with it. Hence the suppress scope.
+						using (TransactionScope suppressScope = new TransactionScope(TransactionScopeOption.Suppress)){
+							CreateAndPublishFault(message, ex);
+							suppressScope.Complete();
+						}
 					}
 				} while (_consumers.MoveNext());
 
